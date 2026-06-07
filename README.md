@@ -1,63 +1,66 @@
 # AI Production Template
 
-This project repository is the starting point for a production-style AI, ML, and LLMOps project. In Lecture 1, the project does not call a real ML model or LLM API. Instead, it establishes the engineering foundation that later lectures will extend.
+This repository is a progressive MLOps/LLMOps learning project. Each lecture extends the same production-style AI project instead of starting from scratch.
 
-## Current Status
+## Current status
 
 ```text
 Lecture 1 complete: Production AI Project Foundation
+Lecture 2 complete: Document Processing, Data Versioning, and Chatbot Shell
 ```
 
-The project currently demonstrates:
+## Learning progression
 
-- project structure
-- YAML-based configuration
-- config loading
-- logging
-- output artifact creation
-- basic tests
-- Git-ready structure
+| Lecture | Main focus | Project additions |
+| ------- | ---------- | ----------------- |
+| Lecture 1 | Production AI foundations | Config, logging, seed, artifacts, tests, Git-ready structure |
+| Lecture 2 | Document data operations | Raw documents, validation, cleaning, chunking, lineage, DVC preparation, Streamlit shell |
 
-## Why this project exists
+## Important limitation
 
-Production AI is not just about model building. Real AI systems need structure, configuration, logs, tests, reproducibility, and clear documentation. This repository will grow lecture by lecture into a more complete MLOps/LLMOps project.
+The Lecture 2 chatbot is not powered by an LLM.
 
-Think of this repo as the foundation of a building. Future lectures will add the rooms, wiring, security, monitoring, and automation.
+It uses keyword-based local document lookup only.
 
-## Project Structure
+No embeddings, vector databases, semantic search, Azure AI Search, Azure OpenAI, or full RAG pipeline are used yet. Those capabilities will be added in later lectures.
+
+## Project structure
 
 ```text
 ai-production-template/
-├── configs/
-│   └── config.yaml
-├── data/
-│   └── .gitkeep
-├── notebooks/
-│   └── .gitkeep
-├── src/
-│   ├── __init__.py
-│   ├── config_loader.py
-│   ├── logger.py
-│   └── utils.py
-├── tests/
-│   └── test_project_structure.py
-├── outputs/
-│   └── .gitkeep
-├── logs/
-│   └── .gitkeep
-├── models/
-│   └── .gitkeep
-├── docs/
-│   └── lecture_01_foundation.md
-├── main.py
-├── requirements.txt
-├── README.md
-└── .gitignore
+|-- app/
+|   `-- streamlit_app.py
+|-- configs/
+|   `-- config.yaml
+|-- data/
+|   |-- raw/
+|   |   `-- policies_v1/
+|   |-- processed/
+|   `-- metadata/
+|-- docs/
+|   |-- lecture_01_foundation.md
+|   `-- lecture_02_document_processing.md
+|-- notebooks/
+|-- src/
+|   |-- config_loader.py
+|   |-- logger.py
+|   |-- utils.py
+|   |-- chat_service.py
+|   |-- ingestion/
+|   `-- processing/
+|-- tests/
+|-- outputs/
+|-- logs/
+|-- models/
+|-- main.py
+|-- pytest.ini
+|-- requirements.txt
+|-- README.md
+|-- .gitignore
+`-- .dvcignore
 ```
 
 ## Setup
-
-Python 3.10 or above is recommended.
 
 Create a virtual environment:
 
@@ -83,18 +86,46 @@ Install dependencies:
 pip install -r requirements.txt
 ```
 
-## Run the project
+## Run Lecture 1 baseline
 
 ```bash
 python main.py
 ```
 
-This loads `configs/config.yaml`, initializes logging, sets the seed, simulates a project run, saves an output artifact, and writes logs.
+Expected generated files:
+
+```text
+outputs/run_summary.txt
+logs/lecture_1_demo.log
+```
+
+## Run Lecture 2 document pipeline
+
+```bash
+python -m src.processing.build_knowledge_artifacts
+```
 
 Expected generated files:
 
-- `outputs/run_summary.txt`
-- `logs/lecture_1_demo.log`
+```text
+data/processed/chunks_v1.json
+data/metadata/lineage_v1.json
+logs/lecture_2_document_pipeline.log
+```
+
+## Run Lecture 2 Streamlit chatbot
+
+```bash
+streamlit run app/streamlit_app.py
+```
+
+Open:
+
+```text
+http://localhost:8501
+```
+
+Ask questions about leave, travel, reimbursement, laptop, password, or helpdesk topics. The app shows the matched source file and identifies the retrieval method as keyword lookup.
 
 ## Run tests
 
@@ -102,49 +133,27 @@ Expected generated files:
 pytest
 ```
 
-The current tests validate that the required project folders and files exist.
-
-## Lecture Documentation
+## Lecture documentation
 
 Detailed lecture notes are available in:
 
-```text
-docs/lecture_01_foundation.md
-```
-
-[Lecture 1: Production AI Project Foundation](docs/lecture_01_foundation.md)
-
-## Roadmap
-
-| Future Topic             | How it will extend this project                    |
-| ------------------------ | -------------------------------------------------- |
-| Data validation          | Add validation scripts and data quality checks     |
-| Data/document versioning | Add dataset or document version tracking           |
-| ML training pipeline     | Add `src/training/` and model training code        |
-| Experiment tracking      | Add MLflow or similar tracking                     |
-| LLM API integration      | Add `src/llm/` for provider calls                  |
-| Prompt management        | Add prompt templates and prompt versioning         |
-| RAG pipeline             | Add ingestion, chunking, embeddings, and retrieval |
-| Evaluation               | Add `src/evaluation/` for ML/LLM evaluation        |
-| Docker                   | Add `Dockerfile` and container instructions        |
-| CI/CD                    | Add `.github/workflows/`                           |
-| Cloud deployment         | Add `deploy/` or `infra/`                          |
-| Monitoring               | Add metrics, tracing, and observability            |
+- [Lecture 1: Production AI Project Foundation](docs/lecture_01_foundation.md)
+- [Lecture 2: Document Processing, Data Versioning, and Chatbot Shell](docs/lecture_02_document_processing.md)
 
 ## Git workflow
 
 ```bash
 git status
-git add .
-git commit -m "Create Lecture 1 production AI project foundation"
+git add app configs data docs src tests .dvcignore .gitignore pytest.ini requirements.txt README.md
+git commit -m "Add Lecture 2 document pipeline and chatbot shell"
 ```
 
-Each lecture should end with a meaningful commit so learners can track how the project evolves.
-
-## Important note
-
-There is no real LLM integration in Lecture 1. This is intentional. API keys, billing, authentication, and quota issues are avoided so learners can focus on production project foundations first.
+DVC-tracked raw data should not be committed directly to GitHub after `dvc add`. Commit the `.dvc` pointer file generated by DVC instead.
 
 ## Summary
 
-This repository will grow gradually through the course. Lecture 1 creates the clean foundation. Future lectures will add real ML, LLMOps, RAG, evaluation, deployment, CI/CD, and monitoring capabilities.
+Lecture 1 built the production engineering foundation.
+
+Lecture 2 added governed, validated, versioned document data and a visible application shell.
+
+Future lectures will add semantic retrieval, embeddings, RAG, evaluation, orchestration, deployment, CI/CD, and monitoring.

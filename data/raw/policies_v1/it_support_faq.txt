@@ -1,0 +1,13 @@
+IT Support FAQ
+
+If a company laptop is lost or stolen, the employee must report the incident to the IT helpdesk and the reporting manager immediately. The report should include the last known location, date, time, and any security concerns. IT will guide the employee through device lock, recovery, and replacement steps.
+
+Password reset requests should be raised through the IT helpdesk portal or approved support channel. Employees may be asked to verify their identity before a reset is completed. Passwords should be strong, unique, and changed whenever there is a suspected compromise.
+
+The IT helpdesk supports common issues such as login problems, software installation, email access, network access, device performance, and approved hardware requests. Employees should include screenshots, error messages, and basic troubleshooting details when opening a ticket.
+
+Password sharing is not allowed. Employees must not share passwords with colleagues, managers, vendors, or support staff. If access is needed by another person, the correct process is to request approved account access or role-based permissions.
+
+Endpoint protection must remain enabled on all company devices. Employees should not disable antivirus, firewall, disk encryption, or monitoring tools. If endpoint protection blocks a file or website needed for work, the employee should contact IT instead of bypassing the control.
+
+Security incidents must be reported quickly. Examples include phishing emails, suspicious login alerts, malware warnings, unexpected password prompts, or accidental sharing of confidential files. Early incident reporting helps IT reduce risk and protect company systems.

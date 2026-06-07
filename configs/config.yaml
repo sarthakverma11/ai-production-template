@@ -16,3 +16,24 @@ runtime:
 experiment:
   run_name: lecture_1_demo
   description: First reproducible AI project template run
+
+data:
+  raw_dir: data/raw/policies_v1
+  processed_dir: data/processed
+  metadata_dir: data/metadata
+  document_version: v1
+  supported_extensions:
+    - .txt
+  minimum_document_length: 50
+
+processing:
+  strategy: fixed_size
+  chunk_size: 500
+  chunk_overlap: 50
+  chunks_output_file: chunks_v1.json
+  lineage_output_file: lineage_v1.json
+
+application:
+  title: Production AI Knowledge Assistant
+  description: Lecture 2 local document-processing and chatbot demonstration
+  welcome_message: Ask a question about the available company policy documents.

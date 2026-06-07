@@ -1,0 +1,5 @@
+# DVC can ignore local cache and temporary files.
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
