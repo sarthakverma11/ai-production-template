@@ -1,0 +1,6 @@
+outs:
+- md5: 62a67e84c63792aaf81fbf787ddb0577.dir
+  size: 4693
+  nfiles: 3
+  hash: md5
+  path: policies_v1
