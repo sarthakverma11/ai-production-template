@@ -3,3 +3,7 @@ pytest
 numpy
 dvc
 streamlit
+openai
+azure-search-documents
+azure-storage-blob
+python-dotenv

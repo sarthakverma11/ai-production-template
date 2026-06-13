@@ -17,6 +17,9 @@ def test_required_folders_exist():
         "src",
         "src/ingestion",
         "src/processing",
+        "src/storage",
+        "src/embeddings",
+        "src/search",
         "tests",
         "outputs",
         "logs",
@@ -35,10 +38,12 @@ def test_required_files_exist():
         "data/raw/policies_v1/travel_policy.txt",
         "data/raw/policies_v1/it_support_faq.txt",
         "docs/lecture_02_document_processing.md",
+        "docs/lecture_03_azure_vector_search.md",
         "main.py",
         "pytest.ini",
         "requirements.txt",
         "README.md",
+        ".env.example",
         ".dvcignore",
     ]
 

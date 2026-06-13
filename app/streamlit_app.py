@@ -1,6 +1,7 @@
-"""Streamlit shell for the Lecture 2 keyword chatbot."""
+"""Streamlit shell for Lecture 3 semantic retrieval."""
 
 import html
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -13,9 +14,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.chat_service import answer_question, list_available_policy_files  # noqa: E402
+from src.chat_service import answer_question_with_retrieval, list_available_policy_files  # noqa: E402
 from src.config_loader import load_config  # noqa: E402
 from src.logger import get_logger  # noqa: E402
+from src.utils import load_project_env  # noqa: E402
 
 
 SUGGESTED_QUESTIONS = [
@@ -46,15 +48,18 @@ DOCUMENT_DETAILS = {
 
 def main() -> None:
     """Run the Streamlit app."""
+    load_project_env()
     config = load_config(str(PROJECT_ROOT / "configs" / "config.yaml"))
     app_config = config["application"]
     data_config = config["data"]
+    embedding_config = config["embedding"]
+    search_config = config["search"]
     raw_dir = PROJECT_ROOT / data_config["raw_dir"]
 
     logger = get_logger(
-        name="lecture-2-streamlit-app",
+        name="lecture-3-streamlit-app",
         log_dir=str(PROJECT_ROOT / config["runtime"]["log_dir"]),
-        log_file="lecture_2_document_pipeline.log",
+        log_file="lecture_3_vector_search.log",
     )
 
     st.set_page_config(
@@ -68,9 +73,9 @@ def main() -> None:
 
     available_files = list_available_policy_files(raw_dir)
 
-    render_sidebar(data_config, available_files)
+    render_sidebar(data_config, app_config, embedding_config, search_config, available_files)
     render_header(app_config, available_files)
-    render_information_message()
+    render_information_message(app_config)
 
     chat_column, context_column = st.columns([0.64, 0.36], gap="large")
 
@@ -98,6 +103,8 @@ def main() -> None:
             question=question,
             raw_dir=raw_dir,
             document_version=data_config["document_version"],
+            app_config=app_config,
+            search_config=search_config,
             logger=logger,
             should_scroll_to_top=should_scroll_to_top,
         )
@@ -136,31 +143,23 @@ def process_question(
     question: str,
     raw_dir: Path,
     document_version: str,
+    app_config: dict[str, Any],
+    search_config: dict[str, Any],
     logger: Any,
     should_scroll_to_top: bool = False,
 ) -> None:
     """Process manual input and suggested questions through one flow."""
     st.session_state.messages.append({"role": "user", "content": question})
-    logger.info("Received question for keyword lookup.")
+    logger.info("Received question for configured retrieval.")
 
-    try:
-        response = answer_question(
-            question=question,
-            raw_dir=raw_dir,
-            document_version=document_version,
-        )
-    except Exception as error:
-        logger.exception("Keyword lookup failed.")
-        response = {
-            "answer": (
-                "I could not read the local policy documents. "
-                "Please check that the raw data folder exists and contains text files."
-            ),
-            "source_file": None,
-            "retrieval_method": "keyword_lookup",
-            "is_llm_response": False,
-            "error_type": type(error).__name__,
-        }
+    response = answer_question_with_retrieval(
+        question=question,
+        mode=app_config.get("retrieval_mode", "semantic"),
+        raw_dir=raw_dir,
+        document_version=document_version,
+        top_k=int(search_config["top_k"]),
+        keyword_fallback_enabled=bool(app_config.get("keyword_fallback_enabled", False)),
+    )
 
     st.session_state.messages.append(
         {
@@ -170,7 +169,10 @@ def process_question(
                 "source_file": response["source_file"],
                 "retrieval_method": response["retrieval_method"],
                 "is_llm_response": response["is_llm_response"],
+                "retrieved_chunks": response.get("retrieved_chunks", []),
                 "error_type": response.get("error_type"),
+                "retrieval_error": response.get("retrieval_error"),
+                "fallback_used": response.get("fallback_used", False),
             },
         }
     )
@@ -412,13 +414,13 @@ def inject_styles() -> None:
 
 def render_header(app_config: dict[str, str], available_files: list[str]) -> None:
     """Render the compact application header."""
-    status = f"{len(available_files)} local files loaded" if available_files else "No files loaded"
+    status = "Semantic retrieval active"
     st.markdown(
         f"""
         <div class="app-header">
             <div class="header-row">
                 <div>
-                    <div class="eyebrow">Lecture 2 internal demo</div>
+                    <div class="eyebrow">Lecture 3 internal demo</div>
                     <h1 class="app-title">{html.escape(app_config["title"])}</h1>
                     <p class="app-subtitle">{html.escape(app_config["description"])}</p>
                 </div>
@@ -430,21 +432,30 @@ def render_header(app_config: dict[str, str], available_files: list[str]) -> Non
     )
 
 
-def render_information_message() -> None:
+def render_information_message(app_config: dict[str, Any]) -> None:
     """Render a subtle scope callout."""
+    notice = app_config.get(
+        "lecture_3_notice",
+        "Semantic retrieval is active. No LLM-generated answer is used in Lecture 3.",
+    )
     st.markdown(
-        """
+        f"""
         <div class="info-callout">
-            <strong>Scope:</strong> This app uses local keyword lookup only.
-            It does not use an LLM, embeddings, semantic search, Azure AI Search,
-            or a vector database.
+            <strong>Scope:</strong> {html.escape(notice)}
+            The app displays retrieved evidence and metadata only.
         </div>
         """,
         unsafe_allow_html=True,
     )
 
 
-def render_sidebar(data_config: dict[str, Any], available_files: list[str]) -> None:
+def render_sidebar(
+    data_config: dict[str, Any],
+    app_config: dict[str, Any],
+    embedding_config: dict[str, Any],
+    search_config: dict[str, Any],
+    available_files: list[str],
+) -> None:
     """Render clear sidebar sections for demo context."""
     st.sidebar.markdown("## Demo Guide")
     st.sidebar.caption("Use this panel to explain what learners are seeing.")
@@ -452,8 +463,9 @@ def render_sidebar(data_config: dict[str, Any], available_files: list[str]) -> N
     st.sidebar.markdown("### What happens")
     st.sidebar.markdown(
         "1. Ask a policy question.\n"
-        "2. Keywords select a local file.\n"
-        "3. The app returns an excerpt and source metadata."
+        "2. Azure OpenAI embeds the query.\n"
+        "3. Azure AI Search returns top-k chunks.\n"
+        "4. The app displays evidence and metadata."
     )
 
     st.sidebar.markdown("### Data sources")
@@ -467,13 +479,19 @@ def render_sidebar(data_config: dict[str, Any], available_files: list[str]) -> N
     st.sidebar.markdown("### Settings")
     st.sidebar.write(f"Version: `{data_config['document_version']}`")
     st.sidebar.write(f"Raw folder: `{data_config['raw_dir']}`")
-    st.sidebar.write("Retrieval: `keyword_lookup`")
+    embedding_deployment = os.getenv(embedding_config["deployment_env_var"], "text-embedding-3-small")
+    search_index = os.getenv(search_config["index_name_env_var"], "policy-knowledge-index-v1")
+    st.sidebar.write("Retrieval mode: `Semantic vector search`")
+    st.sidebar.write(f"Embedding deployment: `{embedding_deployment}`")
+    st.sidebar.write(f"Search index: `{search_index}`")
+    st.sidebar.write(f"Top-k: `{search_config['top_k']}`")
 
-    with st.sidebar.expander("Lecture 2 limitations", expanded=False):
+    with st.sidebar.expander("Lecture 3 limitations", expanded=False):
         st.write("No LLM-generated answers")
-        st.write("No embeddings")
-        st.write("No vector database")
-        st.write("No semantic search")
+        st.write("No chat completion call")
+        st.write("No LangChain or LlamaIndex")
+        st.write("No Azure Search indexers or skillsets")
+        st.write(f"Configured mode: `{app_config.get('retrieval_mode', 'semantic')}`")
 
 
 def render_cards(available_files: list[str]) -> None:
@@ -481,7 +499,7 @@ def render_cards(available_files: list[str]) -> None:
     st.markdown('<div class="content-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Available documents</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="section-help">The lookup can only search these local files.</div>',
+        '<div class="section-help">These documents produced the chunks indexed for retrieval.</div>',
         unsafe_allow_html=True,
     )
 
@@ -558,7 +576,7 @@ def render_conversation() -> None:
     st.markdown('<div class="content-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Chat</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="section-help">Ask a policy question. The answer appears below with details tucked away.</div>',
+        '<div class="section-help">Ask a policy question. The app retrieves evidence chunks; it does not generate an answer.</div>',
         unsafe_allow_html=True,
     )
 
@@ -589,8 +607,14 @@ def render_answer_details(metadata: dict[str, Any]) -> None:
     retrieval_method = metadata.get("retrieval_method", "keyword_lookup")
     is_llm_response = metadata.get("is_llm_response", False)
     error_type = metadata.get("error_type")
+    retrieval_error = metadata.get("retrieval_error")
+    fallback_used = metadata.get("fallback_used", False)
+    retrieved_chunks = metadata.get("retrieved_chunks", [])
 
-    title = "Answer details"
+    if retrieved_chunks:
+        render_retrieved_chunks(retrieved_chunks)
+
+    title = "Retrieval details"
     if source_file == "No matching source":
         title = "No-match details"
     if error_type:
@@ -604,14 +628,47 @@ def render_answer_details(metadata: dict[str, Any]) -> None:
                 <tr><td>Retrieval method</td><td>{html.escape(retrieval_method)}</td></tr>
                 <tr><td>LLM response</td><td>{str(is_llm_response)}</td></tr>
                 <tr><td>Error type</td><td>{html.escape(error_type or "None")}</td></tr>
+                <tr><td>Fallback used</td><td>{str(fallback_used)}</td></tr>
             </table>
             """,
             unsafe_allow_html=True,
         )
+        if retrieval_error:
+            st.caption(f"Retrieval error: {retrieval_error}")
         st.caption(
-            "Lecture 2 intentionally uses keyword lookup. Semantic retrieval "
-            "and LLM-generated answers are added in later lectures."
+            "Lecture 3 intentionally stops at retrieved evidence. No final LLM "
+            "answer is generated."
         )
+
+
+def render_retrieved_chunks(retrieved_chunks: list[dict[str, Any]]) -> None:
+    """Render ranked chunks returned by Azure AI Search."""
+    st.markdown("#### Retrieved evidence")
+    for chunk in retrieved_chunks:
+        rank = chunk.get("rank")
+        chunk_id = chunk.get("chunk_id") or "unknown chunk"
+        title = f"Rank {rank}: {chunk_id}"
+        with st.expander(title, expanded=rank == 1):
+            st.write(chunk.get("content", ""))
+            score = chunk.get("score")
+            if isinstance(score, float):
+                score_text = f"{score:.4f}"
+            else:
+                score_text = str(score)
+            st.markdown(
+                f"""
+                <table class="metadata-table">
+                    <tr><td>Source file</td><td>{html.escape(str(chunk.get("source_file")))}</td></tr>
+                    <tr><td>Document version</td><td>{html.escape(str(chunk.get("document_version")))}</td></tr>
+                    <tr><td>Chunk ID</td><td>{html.escape(str(chunk_id))}</td></tr>
+                    <tr><td>Chunk index</td><td>{html.escape(str(chunk.get("chunk_index")))}</td></tr>
+                    <tr><td>Search score</td><td>{html.escape(score_text)}</td></tr>
+                    <tr><td>Index version</td><td>{html.escape(str(chunk.get("index_version")))}</td></tr>
+                    <tr><td>Retrieval mode</td><td>{html.escape(str(chunk.get("retrieval_mode")))}</td></tr>
+                </table>
+                """,
+                unsafe_allow_html=True,
+            )
 
 
 if __name__ == "__main__":

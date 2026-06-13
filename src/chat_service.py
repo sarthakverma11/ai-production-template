@@ -1,9 +1,10 @@
-"""Rule-based local policy lookup service."""
+"""Policy lookup service for Lecture 2 keyword lookup and Lecture 3 retrieval."""
 
 from pathlib import Path
 from typing import Any
 
 from src.ingestion.document_loader import load_documents
+from src.search.retrieval_service import retrieve_chunks
 
 
 KEYWORD_TO_SOURCE_FILE = {
@@ -22,6 +23,11 @@ KEYWORD_TO_SOURCE_FILE = {
 FALLBACK_ANSWER = (
     "No matching local policy was found using the current keyword-based lookup. "
     "Semantic retrieval will be added in a later lecture."
+)
+
+SEMANTIC_RETRIEVAL_MESSAGE = (
+    "Semantic retrieval returned the evidence chunks below. "
+    "No LLM-generated answer is used in Lecture 3."
 )
 
 
@@ -71,6 +77,69 @@ def answer_question(
     }
 
 
+def answer_question_with_retrieval(
+    question: str,
+    mode: str = "semantic",
+    raw_dir: str | Path = "data/raw/policies_v1",
+    document_version: str = "v1",
+    top_k: int | None = None,
+    keyword_fallback_enabled: bool = False,
+) -> dict[str, Any]:
+    """Answer through the configured Lecture 3 retrieval mode."""
+    normalized_mode = mode.lower().strip()
+    if normalized_mode == "keyword":
+        return answer_question(
+            question=question,
+            raw_dir=raw_dir,
+            document_version=document_version,
+        )
+
+    if normalized_mode != "semantic":
+        raise ValueError("Retrieval mode must be either 'keyword' or 'semantic'.")
+
+    try:
+        retrieved_chunks = retrieve_chunks(
+            query=question,
+            top_k=top_k,
+            document_version=document_version,
+        )
+    except Exception as error:
+        if keyword_fallback_enabled:
+            fallback = answer_question(
+                question=question,
+                raw_dir=raw_dir,
+                document_version=document_version,
+            )
+            fallback["error_type"] = type(error).__name__
+            fallback["retrieval_error"] = str(error)
+            fallback["fallback_used"] = True
+            return fallback
+
+        return {
+            "answer": (
+                "Semantic retrieval failed. Check Azure environment variables, "
+                "the search index, and indexing status before retrying."
+            ),
+            "source_file": None,
+            "retrieval_method": "semantic_vector_search",
+            "is_llm_response": False,
+            "retrieved_chunks": [],
+            "error_type": type(error).__name__,
+            "retrieval_error": str(error),
+            "fallback_used": False,
+        }
+
+    return {
+        "answer": SEMANTIC_RETRIEVAL_MESSAGE,
+        "source_file": retrieved_chunks[0]["source_file"] if retrieved_chunks else None,
+        "retrieval_method": "semantic_vector_search",
+        "is_llm_response": False,
+        "retrieved_chunks": retrieved_chunks,
+        "error_type": None,
+        "fallback_used": False,
+    }
+
+
 def find_matching_source_file(question: str) -> str | None:
     """Find the first policy file whose keyword appears in the question."""
     normalized_question = question.lower()
@@ -104,4 +173,3 @@ def _select_excerpt(text: str, question: str, max_characters: int = 700) -> str:
         return paragraphs[0][:max_characters]
 
     return text.strip()[:max_characters]
-

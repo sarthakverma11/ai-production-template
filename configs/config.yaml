@@ -33,7 +33,34 @@ processing:
   chunks_output_file: chunks_v1.json
   lineage_output_file: lineage_v1.json
 
+azure_storage:
+  raw_container: raw-documents
+  raw_prefix: policies_v1
+  processed_container: processed-artifacts
+  chunks_blob: chunks_v1.json
+  metadata_container: metadata
+  lineage_blob: lineage_v1.json
+
+embedding:
+  provider: azure_openai
+  deployment_env_var: AZURE_OPENAI_EMBEDDING_DEPLOYMENT
+  dimensions: 1536
+  batch_size: 16
+
+search:
+  index_name_env_var: AZURE_SEARCH_INDEX_NAME
+  index_version: v1
+  vector_field: content_vector
+  content_field: content
+  top_k: 3
+  mode: vector
+  vector_profile_name: policy-vector-profile
+  vector_algorithm_name: policy-hnsw-config
+
 application:
   title: Production AI Knowledge Assistant
-  description: Lecture 2 local document-processing and chatbot demonstration
+  description: Lecture 3 semantic retrieval demonstration
   welcome_message: Ask a question about the available company policy documents.
+  retrieval_mode: semantic
+  lecture_3_notice: Semantic retrieval is active. No LLM-generated answer is used in Lecture 3.
+  keyword_fallback_enabled: false

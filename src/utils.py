@@ -22,3 +22,13 @@ def save_text_artifact(file_path: str, content: str) -> None:
     path = Path(file_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
+
+
+def load_project_env() -> None:
+    """Load local environment variables from .env when python-dotenv is installed."""
+    try:
+        from dotenv import load_dotenv
+    except ModuleNotFoundError:
+        return
+
+    load_dotenv()
