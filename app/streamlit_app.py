@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any
 
 import streamlit as st
+import streamlit.components.v1 as components
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -63,6 +64,7 @@ def main() -> None:
     )
     inject_styles()
     initialize_session_state()
+    scroll_to_top_if_requested()
 
     available_files = list_available_policy_files(raw_dir)
 
@@ -86,6 +88,10 @@ def main() -> None:
     if st.session_state.pending_question:
         question = st.session_state.pending_question
         st.session_state.pending_question = None
+        should_scroll_to_top = st.session_state.pending_question_should_scroll
+        st.session_state.pending_question_should_scroll = False
+    else:
+        should_scroll_to_top = False
 
     if question:
         process_question(
@@ -93,6 +99,7 @@ def main() -> None:
             raw_dir=raw_dir,
             document_version=data_config["document_version"],
             logger=logger,
+            should_scroll_to_top=should_scroll_to_top,
         )
 
 
@@ -102,6 +109,27 @@ def initialize_session_state() -> None:
         st.session_state.messages = []
     if "pending_question" not in st.session_state:
         st.session_state.pending_question = None
+    if "pending_question_should_scroll" not in st.session_state:
+        st.session_state.pending_question_should_scroll = False
+    if "scroll_to_top" not in st.session_state:
+        st.session_state.scroll_to_top = False
+
+
+def scroll_to_top_if_requested() -> None:
+    """Scroll to the top after a suggested question has been processed."""
+    if not st.session_state.scroll_to_top:
+        return
+
+    st.session_state.scroll_to_top = False
+    components.html(
+        """
+        <script>
+        const scrollTarget = window.parent || window;
+        scrollTarget.scrollTo({ top: 0, behavior: "smooth" });
+        </script>
+        """,
+        height=0,
+    )
 
 
 def process_question(
@@ -109,6 +137,7 @@ def process_question(
     raw_dir: Path,
     document_version: str,
     logger: Any,
+    should_scroll_to_top: bool = False,
 ) -> None:
     """Process manual input and suggested questions through one flow."""
     st.session_state.messages.append({"role": "user", "content": question})
@@ -151,6 +180,8 @@ def process_question(
         response["source_file"],
         response["retrieval_method"],
     )
+    if should_scroll_to_top:
+        st.session_state.scroll_to_top = True
     st.rerun()
 
 
@@ -517,6 +548,7 @@ def render_suggested_questions(available_files: list[str]) -> None:
                 disabled=not available_files,
             ):
                 st.session_state.pending_question = question
+                st.session_state.pending_question_should_scroll = True
 
     st.markdown("</div>", unsafe_allow_html=True)
 
