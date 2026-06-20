@@ -48,15 +48,15 @@ Azure Blob Storage chunks_v1.json
 
 ## 5. Azure resources
 
-| Resource | Name |
-| -------- | ---- |
-| Storage account | `stedyodallmops01` |
-| Raw container | `raw-documents` |
-| Processed container | `processed-artifacts` |
-| Metadata container | `metadata` |
-| Embedding deployment | `text-embedding-3-small` |
-| Search service | `srch-edyoda-llmops01` |
-| Search index | `policy-knowledge-index-v1` |
+| Resource             | Name                        |
+| -------------------- | --------------------------- |
+| Storage account      | `stedyodallmops01`          |
+| Raw container        | `raw-documents`             |
+| Processed container  | `processed-artifacts`       |
+| Metadata container   | `metadata`                  |
+| Embedding deployment | `text-embedding-3-small`    |
+| Search service       | `srch-edyoda-llmops01`      |
+| Search index         | `policy-knowledge-index-v1` |
 
 The Azure resources already exist. The Python code creates the search index programmatically.
 
@@ -84,12 +84,12 @@ Secrets must stay in `.env`. They should not be placed in `configs/config.yaml`,
 
 Lecture 3 extends `configs/config.yaml` with non-secret settings.
 
-| Section | Purpose |
-| ------- | ------- |
-| `azure_storage` | Container names and blob names |
-| `embedding` | Embedding provider, deployment env var, dimensions, and batch size |
-| `search` | Index name env var, vector field, top-k, profile, and algorithm names |
-| `application` | Retrieval mode and Lecture 3 user-facing notice |
+| Section         | Purpose                                                               |
+| --------------- | --------------------------------------------------------------------- |
+| `azure_storage` | Container names and blob names                                        |
+| `embedding`     | Embedding provider, deployment env var, dimensions, and batch size    |
+| `search`        | Index name env var, vector field, top-k, profile, and algorithm names |
+| `application`   | Retrieval mode and Lecture 3 user-facing notice                       |
 
 The config validates that:
 
@@ -99,16 +99,16 @@ The config validates that:
 
 ## 8. New code paths
 
-| Path | Purpose |
-| ---- | ------- |
-| `src/storage/blob_service.py` | Reads JSON artifacts and lists/uploads blobs |
-| `src/embeddings/embedding_service.py` | Calls Azure OpenAI embeddings |
-| `src/search/index_schema.py` | Defines Azure AI Search vector index schema |
-| `src/search/index_manager.py` | Creates or reuses the search index |
-| `src/search/indexing_pipeline.py` | Embeds chunks and uploads records |
-| `src/search/retrieval_service.py` | Embeds user query and retrieves top-k chunks |
-| `src/chat_service.py` | Routes app questions through keyword or semantic mode |
-| `app/streamlit_app.py` | Displays retrieved evidence and metadata |
+| Path                                  | Purpose                                               |
+| ------------------------------------- | ----------------------------------------------------- |
+| `src/storage/blob_service.py`         | Reads JSON artifacts and lists/uploads blobs          |
+| `src/embeddings/embedding_service.py` | Calls Azure OpenAI embeddings                         |
+| `src/search/index_schema.py`          | Defines Azure AI Search vector index schema           |
+| `src/search/index_manager.py`         | Creates or reuses the search index                    |
+| `src/search/indexing_pipeline.py`     | Embeds chunks and uploads records                     |
+| `src/search/retrieval_service.py`     | Embeds user query and retrieves top-k chunks          |
+| `src/chat_service.py`                 | Routes app questions through keyword or semantic mode |
+| `app/streamlit_app.py`                | Displays retrieved evidence and metadata              |
 
 ## 9. Run Lecture 2 first
 
@@ -228,16 +228,16 @@ Git does not track:
 
 ## 15. Troubleshooting
 
-| Problem | Check |
-| ------- | ----- |
-| Missing environment variable | Fill the local `.env` file |
-| Blob not found | Confirm exact container and blob names |
-| Invalid JSON blob | Re-upload `chunks_v1.json` or `lineage_v1.json` |
-| Embedding deployment not found | Check `AZURE_OPENAI_EMBEDDING_DEPLOYMENT` |
-| Dimension mismatch | Confirm the embedding deployment returns 1536 dimensions |
-| Search index creation fails | Check `AZURE_SEARCH_ENDPOINT` and admin key |
-| Retrieval returns no chunks | Run the indexing pipeline first |
-| Streamlit shows retrieval error | Check local `.env` and whether the index exists |
+| Problem                         | Check                                                    |
+| ------------------------------- | -------------------------------------------------------- |
+| Missing environment variable    | Fill the local `.env` file                               |
+| Blob not found                  | Confirm exact container and blob names                   |
+| Invalid JSON blob               | Re-upload `chunks_v1.json` or `lineage_v1.json`          |
+| Embedding deployment not found  | Check `AZURE_OPENAI_EMBEDDING_DEPLOYMENT`                |
+| Dimension mismatch              | Confirm the embedding deployment returns 1536 dimensions |
+| Search index creation fails     | Check `AZURE_SEARCH_ENDPOINT` and admin key              |
+| Retrieval returns no chunks     | Run the indexing pipeline first                          |
+| Streamlit shows retrieval error | Check local `.env` and whether the index exists          |
 
 ## 16. Quick recap
 
