@@ -1,6 +1,5 @@
 outs:
-- md5: 37b6625a4e8e2909c44cdc5f6e00e6ef.dir
-  size: 4807
+- md5: f111d4694c531f20c7a5d9e857bb7226.dir
   nfiles: 3
   hash: md5
   path: policies_v1
