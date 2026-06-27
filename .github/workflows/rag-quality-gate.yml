@@ -1,0 +1,65 @@
+name: Lecture 5 RAG Quality Gate
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  rag-quality-gate:
+    name: Refresh KB and evaluate RAG quality
+    runs-on: ubuntu-latest
+
+    env:
+      PROJECT_ENV: ci
+      AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+      AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+      AZURE_OPENAI_EMBEDDING_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_EMBEDDING_DEPLOYMENT }}
+      AZURE_OPENAI_CHAT_DEPLOYMENT: ${{ secrets.AZURE_OPENAI_CHAT_DEPLOYMENT }}
+      AZURE_SEARCH_ENDPOINT: ${{ secrets.AZURE_SEARCH_ENDPOINT }}
+      AZURE_SEARCH_API_KEY: ${{ secrets.AZURE_SEARCH_API_KEY }}
+      AZURE_SEARCH_INDEX_NAME: ${{ secrets.AZURE_SEARCH_INDEX_NAME }}
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run unit tests
+        run: pytest
+
+      - name: Build knowledge artifacts
+        run: python -m src.processing.build_knowledge_artifacts
+
+      - name: Upload knowledge artifacts to Azure Blob Storage
+        run: python -m src.storage.upload_knowledge_artifacts
+
+      - name: Refresh Azure AI Search index
+        run: python -m src.search.indexing_pipeline
+
+      - name: Run production prompt evaluation
+        run: python -m src.evaluation.run_eval_pipeline --prompt-version qa_prompt_v2 --skip-llm-judge
+
+      - name: Check RAG quality gate
+        run: python -m src.evaluation.check_quality_gate
+
+      - name: Upload evaluation artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lecture-5-evaluation-results
+          path: |
+            evaluations/results/
+            outputs/
+            logs/
+          if-no-files-found: ignore

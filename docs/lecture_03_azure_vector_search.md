@@ -166,13 +166,17 @@ outputs/retrieval_results.json
 
 The CLI prints ranked chunk IDs, scores, and source files.
 
-## 12. Run the Streamlit app
+## 12. App note
+
+At the end of Lecture 3, the Streamlit app displayed retrieval evidence only.
+
+In the current repository, the Streamlit app has moved forward to the Lecture 4 RAG demo. Use the Lecture 3 retrieval CLI when you want to demonstrate retrieval-only behavior:
 
 ```bash
-streamlit run app/streamlit_app.py
+python -m src.search.retrieval_service "How much time off do employees receive?"
 ```
 
-The app displays:
+Lecture 3 retrieval returns:
 
 - semantic retrieval notice
 - retrieved chunk rank
@@ -185,7 +189,7 @@ The app displays:
 - index version
 - retrieval mode
 
-It does not display:
+Lecture 3 retrieval does not return:
 
 - Azure keys
 - connection strings
