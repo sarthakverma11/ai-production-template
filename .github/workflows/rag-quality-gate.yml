@@ -10,6 +10,7 @@ jobs:
   rag-quality-gate:
     name: Refresh KB and evaluate RAG quality
     runs-on: ubuntu-latest
+    environment: ragci
 
     env:
       PROJECT_ENV: ci
@@ -37,6 +38,18 @@ jobs:
 
       - name: Run unit tests
         run: pytest
+
+      - name: Check required secrets
+        run: |
+          test -n "$AZURE_STORAGE_CONNECTION_STRING" || (echo "Missing AZURE_STORAGE_CONNECTION_STRING" && exit 1)
+          test -n "$AZURE_OPENAI_ENDPOINT" || (echo "Missing AZURE_OPENAI_ENDPOINT" && exit 1)
+          test -n "$AZURE_OPENAI_API_KEY" || (echo "Missing AZURE_OPENAI_API_KEY" && exit 1)
+          test -n "$AZURE_OPENAI_API_VERSION" || (echo "Missing AZURE_OPENAI_API_VERSION" && exit 1)
+          test -n "$AZURE_OPENAI_EMBEDDING_DEPLOYMENT" || (echo "Missing AZURE_OPENAI_EMBEDDING_DEPLOYMENT" && exit 1)
+          test -n "$AZURE_OPENAI_CHAT_DEPLOYMENT" || (echo "Missing AZURE_OPENAI_CHAT_DEPLOYMENT" && exit 1)
+          test -n "$AZURE_SEARCH_ENDPOINT" || (echo "Missing AZURE_SEARCH_ENDPOINT" && exit 1)
+          test -n "$AZURE_SEARCH_API_KEY" || (echo "Missing AZURE_SEARCH_API_KEY" && exit 1)
+          test -n "$AZURE_SEARCH_INDEX_NAME" || (echo "Missing AZURE_SEARCH_INDEX_NAME" && exit 1)
 
       - name: Build knowledge artifacts
         run: python -m src.processing.build_knowledge_artifacts
