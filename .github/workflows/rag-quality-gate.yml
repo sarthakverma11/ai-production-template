@@ -10,7 +10,6 @@ jobs:
   rag-quality-gate:
     name: Refresh KB and evaluate RAG quality
     runs-on: ubuntu-latest
-    environment: ragci
 
     env:
       PROJECT_ENV: ci

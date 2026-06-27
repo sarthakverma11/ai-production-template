@@ -29,7 +29,7 @@ This lecture does not add Airflow, Docker, FastAPI, frontend code, or a rebuilt 
 ## 3. End-to-end flow
 
 ```text
-push to main
+push to master
 -> install Python dependencies
 -> run pytest
 -> rebuild Lecture 2 chunks and lineage
@@ -65,7 +65,7 @@ Do not put these values in code, YAML config files, docs, or committed logs.
 
 ## 5. Workflow commands
 
-The workflow runs the same beginner-friendly commands that trainers can run locally:
+The workflow runs the same beginner-friendly commands that can also be run locally:
 
 ```bash
 pytest
@@ -102,9 +102,9 @@ If the score is below `0.80`, `src.evaluation.check_quality_gate` exits with sta
 ## 7. Demo steps
 
 1. Open `.github/workflows/rag-quality-gate.yml`.
-2. Show the workflow trigger: push to `main` plus manual rerun.
+2. Show the workflow trigger: push to `master` plus manual rerun.
 3. Show the GitHub secrets list.
-4. Push a small safe change to `main`.
+4. Push a small safe change to `master`.
 5. Open the GitHub Actions run.
 6. Point out each step: tests, artifact build, blob upload, indexing, evaluation, quality gate.
 7. Open the uploaded workflow artifact and inspect `comparison_summary.csv`.
