@@ -1,0 +1,8 @@
+active_chat_model:
+  provider: azure_openai
+  deployment_env_var: AZURE_OPENAI_CHAT_DEPLOYMENT
+  deployment_name: gpt-4.1-mini
+  temperature: 0.2
+  max_tokens: 500
+  purpose: answer_generation
+  status: active

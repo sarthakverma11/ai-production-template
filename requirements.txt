@@ -7,3 +7,5 @@ openai
 azure-search-documents
 azure-storage-blob
 python-dotenv
+pandas
+mlflow

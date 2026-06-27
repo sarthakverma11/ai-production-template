@@ -3,7 +3,7 @@ name: Lecture 5 RAG Quality Gate
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch:
 
 jobs:

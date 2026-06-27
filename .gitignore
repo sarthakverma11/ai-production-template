@@ -22,6 +22,10 @@ data/processed/*
 data/metadata/*
 !data/metadata/.gitkeep
 
+evaluations/results/
+mlruns/
+mlflow.db
+
 .DS_Store
 .vscode/
 .idea/

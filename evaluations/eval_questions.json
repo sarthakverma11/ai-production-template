@@ -1,0 +1,42 @@
+[
+  {
+    "id": "eval_001",
+    "question": "How many days of annual leave do employees receive?",
+    "expected_source": "leave_policy.txt",
+    "expected_keywords": ["annual leave", "days"],
+    "expected_facts": ["Employees receive twelve days of casual leave per calendar year."],
+    "should_refuse": false
+  },
+  {
+    "id": "eval_002",
+    "question": "What is required for travel reimbursement?",
+    "expected_source": "travel_policy.txt",
+    "expected_keywords": ["reimbursement", "receipts"],
+    "expected_facts": ["Travel reimbursement requires receipts."],
+    "should_refuse": false
+  },
+  {
+    "id": "eval_003",
+    "question": "Who should employees contact for IT support?",
+    "expected_source": "it_support_faq.txt",
+    "expected_keywords": ["IT", "support"],
+    "expected_facts": ["Employees should contact the IT helpdesk for support."],
+    "should_refuse": false
+  },
+  {
+    "id": "eval_004",
+    "question": "What should I do if I need to reset my password?",
+    "expected_source": "it_support_faq.txt",
+    "expected_keywords": ["password", "reset"],
+    "expected_facts": ["Password reset requests go through the IT helpdesk portal or approved support channel."],
+    "should_refuse": false
+  },
+  {
+    "id": "eval_005",
+    "question": "What is the company's policy for buying cryptocurrency?",
+    "expected_source": "",
+    "expected_keywords": [],
+    "expected_facts": [],
+    "should_refuse": true
+  }
+]

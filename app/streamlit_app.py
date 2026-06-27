@@ -1,4 +1,4 @@
-"""Streamlit shell for Lecture 3 semantic retrieval."""
+"""Streamlit app for Lecture 4 grounded RAG answer generation."""
 
 import html
 import os
@@ -14,8 +14,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from src.chat_service import answer_question_with_retrieval, list_available_policy_files  # noqa: E402
+from src.chat_service import list_available_policy_files  # noqa: E402
 from src.config_loader import load_config  # noqa: E402
+from src.generation.answer_generator import generate_answer  # noqa: E402
+from src.generation.prompt_loader import load_prompt_registry  # noqa: E402
 from src.logger import get_logger  # noqa: E402
 from src.utils import load_project_env  # noqa: E402
 
@@ -56,10 +58,12 @@ def main() -> None:
     search_config = config["search"]
     raw_dir = PROJECT_ROOT / data_config["raw_dir"]
 
+    prompt_registry = load_prompt_registry(PROJECT_ROOT / "prompts" / "prompt_registry.yaml")
+
     logger = get_logger(
-        name="lecture-3-streamlit-app",
+        name="lecture-4-streamlit-app",
         log_dir=str(PROJECT_ROOT / config["runtime"]["log_dir"]),
-        log_file="lecture_3_vector_search.log",
+        log_file="lecture_4_rag_generation.log",
     )
 
     st.set_page_config(
@@ -73,9 +77,9 @@ def main() -> None:
 
     available_files = list_available_policy_files(raw_dir)
 
-    render_sidebar(data_config, app_config, embedding_config, search_config, available_files)
+    render_sidebar(data_config, embedding_config, search_config, prompt_registry, available_files)
     render_header(app_config, available_files)
-    render_information_message(app_config)
+    render_information_message()
 
     chat_column, context_column = st.columns([0.64, 0.36], gap="large")
 
@@ -87,8 +91,7 @@ def main() -> None:
         render_suggested_questions(available_files)
 
     question = st.chat_input(
-        "Ask about leave, travel, laptop, password, or reimbursement",
-        disabled=not available_files,
+        "Ask a company policy question",
     )
     if st.session_state.pending_question:
         question = st.session_state.pending_question
@@ -101,9 +104,6 @@ def main() -> None:
     if question:
         process_question(
             question=question,
-            raw_dir=raw_dir,
-            document_version=data_config["document_version"],
-            app_config=app_config,
             search_config=search_config,
             logger=logger,
             should_scroll_to_top=should_scroll_to_top,
@@ -141,46 +141,63 @@ def scroll_to_top_if_requested() -> None:
 
 def process_question(
     question: str,
-    raw_dir: Path,
-    document_version: str,
-    app_config: dict[str, Any],
     search_config: dict[str, Any],
     logger: Any,
     should_scroll_to_top: bool = False,
 ) -> None:
-    """Process manual input and suggested questions through one flow."""
+    """Process manual input and suggested questions through Lecture 4 RAG."""
     st.session_state.messages.append({"role": "user", "content": question})
-    logger.info("Received question for configured retrieval.")
+    logger.info("Received question for grounded RAG generation.")
 
-    response = answer_question_with_retrieval(
-        question=question,
-        mode=app_config.get("retrieval_mode", "semantic"),
-        raw_dir=raw_dir,
-        document_version=document_version,
-        top_k=int(search_config["top_k"]),
-        keyword_fallback_enabled=bool(app_config.get("keyword_fallback_enabled", False)),
-    )
+    try:
+        response = generate_answer(
+            question=question,
+            top_k=int(search_config["top_k"]),
+        )
+        answer = response["answer"]
+        metadata = {
+            "source_files": response["source_files"],
+            "retrieval_method": "grounded_rag",
+            "is_llm_response": True,
+            "retrieved_chunks": response.get("retrieved_chunks", []),
+            "retrieved_chunk_ids": response.get("retrieved_chunk_ids", []),
+            "prompt_version": response["prompt_version"],
+            "model_deployment": response["model_deployment"],
+            "latency_ms": response["latency_ms"],
+            "error_type": None,
+            "generation_error": None,
+        }
+    except Exception as error:
+        answer = (
+            "Grounded RAG answer generation failed. Check the Lecture 4 required "
+            "environment variables, Azure OpenAI chat deployment, and Lecture 3 retrieval setup."
+        )
+        metadata = {
+            "source_files": [],
+            "retrieval_method": "grounded_rag",
+            "is_llm_response": False,
+            "retrieved_chunks": [],
+            "retrieved_chunk_ids": [],
+            "prompt_version": None,
+            "model_deployment": None,
+            "latency_ms": None,
+            "error_type": type(error).__name__,
+            "generation_error": str(error),
+        }
 
     st.session_state.messages.append(
         {
             "role": "assistant",
-            "content": response["answer"],
-            "metadata": {
-                "source_file": response["source_file"],
-                "retrieval_method": response["retrieval_method"],
-                "is_llm_response": response["is_llm_response"],
-                "retrieved_chunks": response.get("retrieved_chunks", []),
-                "error_type": response.get("error_type"),
-                "retrieval_error": response.get("retrieval_error"),
-                "fallback_used": response.get("fallback_used", False),
-            },
+            "content": answer,
+            "metadata": metadata,
         }
     )
 
     logger.info(
-        "Selected source file: %s; retrieval method: %s",
-        response["source_file"],
-        response["retrieval_method"],
+        "RAG response completed; prompt=%s; sources=%s; error=%s",
+        metadata["prompt_version"],
+        metadata["source_files"],
+        metadata["error_type"],
     )
     if should_scroll_to_top:
         st.session_state.scroll_to_top = True
@@ -414,15 +431,15 @@ def inject_styles() -> None:
 
 def render_header(app_config: dict[str, str], available_files: list[str]) -> None:
     """Render the compact application header."""
-    status = "Semantic retrieval active"
+    status = "Grounded RAG active"
     st.markdown(
         f"""
         <div class="app-header">
             <div class="header-row">
                 <div>
-                    <div class="eyebrow">Lecture 3 internal demo</div>
+                    <div class="eyebrow">Lecture 4 internal demo</div>
                     <h1 class="app-title">{html.escape(app_config["title"])}</h1>
-                    <p class="app-subtitle">{html.escape(app_config["description"])}</p>
+                    <p class="app-subtitle">Grounded answer generation with prompt versions, retrieved sources, and model metadata.</p>
                 </div>
                 <div class="status-badge">{html.escape(status)}</div>
             </div>
@@ -432,17 +449,13 @@ def render_header(app_config: dict[str, str], available_files: list[str]) -> Non
     )
 
 
-def render_information_message(app_config: dict[str, Any]) -> None:
+def render_information_message() -> None:
     """Render a subtle scope callout."""
-    notice = app_config.get(
-        "lecture_3_notice",
-        "Semantic retrieval is active. No LLM-generated answer is used in Lecture 3.",
-    )
     st.markdown(
-        f"""
+        """
         <div class="info-callout">
-            <strong>Scope:</strong> {html.escape(notice)}
-            The app displays retrieved evidence and metadata only.
+            <strong>Lecture 4 flow:</strong> retrieve evidence chunks, place them into a versioned prompt,
+            call the Azure OpenAI chat deployment, and show a grounded answer with sources.
         </div>
         """,
         unsafe_allow_html=True,
@@ -451,9 +464,9 @@ def render_information_message(app_config: dict[str, Any]) -> None:
 
 def render_sidebar(
     data_config: dict[str, Any],
-    app_config: dict[str, Any],
     embedding_config: dict[str, Any],
     search_config: dict[str, Any],
+    prompt_registry: dict[str, Any],
     available_files: list[str],
 ) -> None:
     """Render clear sidebar sections for demo context."""
@@ -463,10 +476,25 @@ def render_sidebar(
     st.sidebar.markdown("### What happens")
     st.sidebar.markdown(
         "1. Ask a policy question.\n"
-        "2. Azure OpenAI embeds the query.\n"
-        "3. Azure AI Search returns top-k chunks.\n"
-        "4. The app displays evidence and metadata."
+        "2. Lecture 3 retrieves top-k chunks.\n"
+        "3. Lecture 4 loads the active prompt.\n"
+        "4. Azure OpenAI chat generates an answer.\n"
+        "5. The app displays answer, sources, and metadata."
     )
+
+    st.sidebar.markdown("### Required for Lecture 4")
+    required_env_vars = [
+        "AZURE_OPENAI_ENDPOINT",
+        "AZURE_OPENAI_API_KEY",
+        "AZURE_OPENAI_API_VERSION",
+        "AZURE_OPENAI_CHAT_DEPLOYMENT",
+        "AZURE_OPENAI_EMBEDDING_DEPLOYMENT",
+        "AZURE_SEARCH_ENDPOINT",
+        "AZURE_SEARCH_API_KEY",
+        "AZURE_SEARCH_INDEX_NAME",
+    ]
+    for env_var in required_env_vars:
+        st.sidebar.write(f"{env_var}: `{_env_status(env_var)}`")
 
     st.sidebar.markdown("### Data sources")
     if available_files:
@@ -479,19 +507,21 @@ def render_sidebar(
     st.sidebar.markdown("### Settings")
     st.sidebar.write(f"Version: `{data_config['document_version']}`")
     st.sidebar.write(f"Raw folder: `{data_config['raw_dir']}`")
+    st.sidebar.write(f"Active prompt: `{prompt_registry.get('active_prompt', 'unknown')}`")
+    st.sidebar.write(f"Chat deployment: `{os.getenv('AZURE_OPENAI_CHAT_DEPLOYMENT', 'missing')}`")
     embedding_deployment = os.getenv(embedding_config["deployment_env_var"], "text-embedding-3-small")
     search_index = os.getenv(search_config["index_name_env_var"], "policy-knowledge-index-v1")
-    st.sidebar.write("Retrieval mode: `Semantic vector search`")
+    st.sidebar.write("Answer mode: `Grounded RAG`")
     st.sidebar.write(f"Embedding deployment: `{embedding_deployment}`")
     st.sidebar.write(f"Search index: `{search_index}`")
     st.sidebar.write(f"Top-k: `{search_config['top_k']}`")
 
-    with st.sidebar.expander("Lecture 3 limitations", expanded=False):
-        st.write("No LLM-generated answers")
-        st.write("No chat completion call")
-        st.write("No LangChain or LlamaIndex")
-        st.write("No Azure Search indexers or skillsets")
-        st.write(f"Configured mode: `{app_config.get('retrieval_mode', 'semantic')}`")
+    with st.sidebar.expander("Lecture 4 scope", expanded=False):
+        st.write("Uses the existing Lecture 3 Azure AI Search index")
+        st.write("Does not recreate the index")
+        st.write("Does not reprocess documents")
+        st.write("Does not use LangChain or LlamaIndex")
+        st.write("Evaluation is run separately from the app")
 
 
 def render_cards(available_files: list[str]) -> None:
@@ -563,7 +593,6 @@ def render_suggested_questions(available_files: list[str]) -> None:
                 question,
                 key=f"suggested_question_{index}",
                 use_container_width=True,
-                disabled=not available_files,
             ):
                 st.session_state.pending_question = question
                 st.session_state.pending_question_should_scroll = True
@@ -576,7 +605,7 @@ def render_conversation() -> None:
     st.markdown('<div class="content-card">', unsafe_allow_html=True)
     st.markdown('<div class="section-title">Chat</div>', unsafe_allow_html=True)
     st.markdown(
-        '<div class="section-help">Ask a policy question. The app retrieves evidence chunks; it does not generate an answer.</div>',
+        '<div class="section-help">Ask a policy question. The app retrieves chunks and generates a grounded answer from them.</div>',
         unsafe_allow_html=True,
     )
 
@@ -603,20 +632,21 @@ def render_conversation() -> None:
 
 def render_answer_details(metadata: dict[str, Any]) -> None:
     """Render technical response details inside an expander."""
-    source_file = metadata.get("source_file") or "No matching source"
-    retrieval_method = metadata.get("retrieval_method", "keyword_lookup")
+    source_files = metadata.get("source_files", [])
+    source_text = ", ".join(source_files) if source_files else "No sources returned"
+    retrieval_method = metadata.get("retrieval_method", "grounded_rag")
     is_llm_response = metadata.get("is_llm_response", False)
     error_type = metadata.get("error_type")
-    retrieval_error = metadata.get("retrieval_error")
-    fallback_used = metadata.get("fallback_used", False)
+    generation_error = metadata.get("generation_error")
     retrieved_chunks = metadata.get("retrieved_chunks", [])
+    prompt_version = metadata.get("prompt_version") or "None"
+    model_deployment = metadata.get("model_deployment") or "None"
+    latency_ms = metadata.get("latency_ms")
 
     if retrieved_chunks:
         render_retrieved_chunks(retrieved_chunks)
 
-    title = "Retrieval details"
-    if source_file == "No matching source":
-        title = "No-match details"
+    title = "RAG answer details"
     if error_type:
         title = "Error details"
 
@@ -624,21 +654,28 @@ def render_answer_details(metadata: dict[str, Any]) -> None:
         st.markdown(
             f"""
             <table class="metadata-table">
-                <tr><td>Source file</td><td>{html.escape(source_file)}</td></tr>
+                <tr><td>Source files</td><td>{html.escape(source_text)}</td></tr>
                 <tr><td>Retrieval method</td><td>{html.escape(retrieval_method)}</td></tr>
                 <tr><td>LLM response</td><td>{str(is_llm_response)}</td></tr>
+                <tr><td>Prompt version</td><td>{html.escape(str(prompt_version))}</td></tr>
+                <tr><td>Model deployment</td><td>{html.escape(str(model_deployment))}</td></tr>
+                <tr><td>Latency ms</td><td>{html.escape(str(latency_ms))}</td></tr>
                 <tr><td>Error type</td><td>{html.escape(error_type or "None")}</td></tr>
-                <tr><td>Fallback used</td><td>{str(fallback_used)}</td></tr>
             </table>
             """,
             unsafe_allow_html=True,
         )
-        if retrieval_error:
-            st.caption(f"Retrieval error: {retrieval_error}")
+        if generation_error:
+            st.caption(f"Generation error: {generation_error}")
         st.caption(
-            "Lecture 3 intentionally stops at retrieved evidence. No final LLM "
-            "answer is generated."
+            "Lecture 4 uses retrieved evidence chunks inside a versioned prompt "
+            "before calling the chat model."
         )
+
+
+def _env_status(env_var: str) -> str:
+    """Return a short display status for required environment variables."""
+    return "set" if os.getenv(env_var) else "missing"
 
 
 def render_retrieved_chunks(retrieved_chunks: list[dict[str, Any]]) -> None:

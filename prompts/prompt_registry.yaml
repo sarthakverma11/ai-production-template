@@ -1,0 +1,18 @@
+active_prompt: qa_prompt_v2
+
+prompts:
+  qa_prompt_v1:
+    prompt_version: qa_prompt_v1
+    file_path: prompts/qa_prompt_v1.txt
+    description: Simple classroom RAG prompt for clear answer generation.
+    status: active
+    owner: training-team
+    created_date: 2026-06-25
+
+  qa_prompt_v2:
+    prompt_version: qa_prompt_v2
+    file_path: prompts/qa_prompt_v2.txt
+    description: Stricter production-style company policy assistant prompt.
+    status: active
+    owner: training-team
+    created_date: 2026-06-25

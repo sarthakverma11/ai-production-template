@@ -52,15 +52,16 @@ search:
   index_version: v1
   vector_field: content_vector
   content_field: content
-  top_k: 3
+  top_k: 2
   mode: vector
   vector_profile_name: policy-vector-profile
   vector_algorithm_name: policy-hnsw-config
 
 application:
   title: Production AI Knowledge Assistant
-  description: Lecture 3 semantic retrieval demonstration
+  description: Lecture 4 grounded RAG answer generation demonstration
   welcome_message: Ask a question about the available company policy documents.
   retrieval_mode: semantic
   lecture_3_notice: Semantic retrieval is active. No LLM-generated answer is used in Lecture 3.
+  lecture_4_notice: Grounded RAG answer generation is active using retrieved chunks and versioned prompts.
   keyword_fallback_enabled: false
